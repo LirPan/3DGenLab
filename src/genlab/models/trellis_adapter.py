@@ -3,7 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from genlab.models.base import Base3DGenModel
-from genlab.utils import write_minimal_cube_obj
+from genlab.models.dummy_mesh import write_dummy_cube_obj
+from genlab.utils import ensure_dir, log_step
 
 
 class TrellisAdapter(Base3DGenModel):
@@ -13,7 +14,7 @@ class TrellisAdapter(Base3DGenModel):
         self.dry_run = dry_run
 
     def setup(self) -> None:
-        print("[TRELLIS] setup complete (placeholder)")
+        log_step("[TRELLIS] setup complete (placeholder)")
 
     def generate(
         self,
@@ -23,11 +24,12 @@ class TrellisAdapter(Base3DGenModel):
     ) -> str:
         model_cfg = self.config["models"]["trellis"]
         out_dir = Path(output_dir or model_cfg["output_dir"])
+        ensure_dir(out_dir)
         out_mesh = out_dir / "trellis_result.obj"
 
         if self.dry_run:
-            write_minimal_cube_obj(out_mesh)
-            print(f"[TRELLIS][dry-run] Wrote placeholder mesh: {out_mesh}")
+            write_dummy_cube_obj(out_mesh)
+            log_step(f"[TRELLIS][dry-run] Wrote dummy cube mesh: {out_mesh}")
             return str(out_mesh)
 
         if input_image:
@@ -43,7 +45,7 @@ class TrellisAdapter(Base3DGenModel):
         # Example placeholders:
         #   python external/TRELLIS/app.py
         #   python external/TRELLIS/example.py --image input.png --output output_dir
-        print(f"[TRELLIS][real-mode] Placeholder command: {cmd}")
+        log_step(f"[TRELLIS][real-mode] Placeholder command: {cmd}")
         if input_prompt:
-            print(f"[TRELLIS][real-mode] Prompt input received: {input_prompt}")
+            log_step(f"[TRELLIS][real-mode] Prompt input received: {input_prompt}")
         return str(out_mesh)

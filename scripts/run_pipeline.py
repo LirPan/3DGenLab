@@ -11,9 +11,9 @@ SRC_DIR = ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from genlab.eval.mesh_metrics import calculate_mesh_metrics
+from genlab.eval.mesh_metrics import evaluate_mesh
 from genlab.models.registry import get_model
-from genlab.utils import ensure_dir, load_yaml_config
+from genlab.utils import ensure_dir, get_stem, load_yaml_config, log_step
 
 
 def parse_args() -> argparse.Namespace:
@@ -36,41 +36,57 @@ def _resolve_prompt(prompt_arg: str | None) -> str | None:
     return prompt_arg
 
 
-def main() -> None:
+def main() -> int:
     args = parse_args()
-    config = load_yaml_config(args.config)
+    try:
+        config = load_yaml_config(args.config)
+        model_name = (args.model or config.get("model_name", "triposr")).strip().lower()
+        input_image = args.input or config.get("input_image")
+        input_prompt = _resolve_prompt(args.prompt) or _resolve_prompt(config.get("input_prompt"))
+        dry_run = args.dry_run or bool(config.get("dry_run", True))
+        do_benchmark = args.benchmark or bool(config.get("benchmark", False))
 
-    model_name = args.model or config.get("model_name", "triposr")
-    input_image = args.input or config.get("input_image")
-    input_prompt = _resolve_prompt(args.prompt) or _resolve_prompt(config.get("input_prompt"))
-    dry_run = args.dry_run or bool(config.get("dry_run", True))
-    do_benchmark = args.benchmark or bool(config.get("benchmark", False))
+        output_root = ensure_dir(config.get("output_root", "outputs"))
+        reports_dir = ensure_dir(output_root / "reports")
 
-    ensure_dir(config.get("output_root", "outputs"))
-    ensure_dir("outputs/reports")
+        if model_name not in config.get("models", {}):
+            raise ValueError(
+                f"Model '{model_name}' is missing from config.models. "
+                f"Defined: {', '.join(config.get('models', {}).keys())}"
+            )
 
-    print(f"[Pipeline] Config: {args.config}")
-    print(f"[Pipeline] Model: {model_name}")
-    print(f"[Pipeline] Dry run: {dry_run}")
-    print(f"[Pipeline] Input image: {input_image}")
-    print(f"[Pipeline] Input prompt: {'<provided>' if input_prompt else '<none>'}")
+        model_output_dir = ensure_dir(config["models"][model_name]["output_dir"])
 
-    model = get_model(model_name=model_name, config=config, dry_run=dry_run)
-    model.setup()
-    mesh_path = model.generate(
-        input_image=input_image,
-        input_prompt=input_prompt,
-        output_dir=config["models"][model_name]["output_dir"],
-    )
+        log_step(f"[Pipeline] Config: {args.config}")
+        log_step(f"[Pipeline] Model: {model_name}")
+        log_step(f"[Pipeline] Dry run: {dry_run}")
+        log_step(f"[Pipeline] Input image: {input_image}")
+        log_step(f"[Pipeline] Input prompt: {'<provided>' if input_prompt else '<none>'}")
+        log_step(f"[Pipeline] Output directory: {model_output_dir}")
 
-    print(f"[Pipeline] Mesh generated at: {mesh_path}")
+        model = get_model(model_name=model_name, config=config, dry_run=dry_run)
+        log_step("[Pipeline] Running model setup")
+        model.setup()
+        log_step("[Pipeline] Generating mesh")
+        mesh_path = model.generate(
+            input_image=input_image,
+            input_prompt=input_prompt,
+            output_dir=str(model_output_dir),
+        )
+        log_step(f"[Pipeline] Mesh generated at: {mesh_path}")
 
-    if do_benchmark:
-        metrics = calculate_mesh_metrics(mesh_path)
-        report_path = Path("outputs/reports") / f"{Path(mesh_path).stem}_metrics.json"
-        report_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
-        print(f"[Pipeline] Benchmark report: {report_path}")
+        if do_benchmark:
+            log_step("[Pipeline] Running benchmark")
+            metrics = evaluate_mesh(mesh_path)
+            report_path = reports_dir / f"{model_name}_{get_stem(mesh_path)}_metrics.json"
+            report_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+            log_step(f"[Pipeline] Benchmark report: {report_path}")
+
+        return 0
+    except Exception as exc:
+        log_step(f"[Pipeline] ERROR: {exc}")
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

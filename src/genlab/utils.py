@@ -6,10 +6,11 @@ from typing import Any, Dict
 import yaml
 
 
-def load_yaml_config(path: str | Path) -> Dict[str, Any]:
+def load_yaml_config(config_path: str | Path) -> Dict[str, Any]:
     """Load a YAML config file into a dictionary."""
-    with Path(path).open("r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+    with Path(config_path).open("r", encoding="utf-8") as f:
+        loaded = yaml.safe_load(f)
+    return loaded if loaded is not None else {}
 
 
 def ensure_dir(path: str | Path) -> Path:
@@ -19,32 +20,18 @@ def ensure_dir(path: str | Path) -> Path:
     return path_obj
 
 
-def write_minimal_cube_obj(output_path: str | Path) -> Path:
-    """Write a tiny valid cube OBJ placeholder mesh."""
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+def ensure_parent_dir(file_path: str | Path) -> Path:
+    """Create parent directory for a file path and return the file Path."""
+    file_obj = Path(file_path)
+    file_obj.parent.mkdir(parents=True, exist_ok=True)
+    return file_obj
 
-    cube_obj = """# Minimal cube OBJ placeholder
-v -0.5 -0.5 -0.5
-v 0.5 -0.5 -0.5
-v 0.5 0.5 -0.5
-v -0.5 0.5 -0.5
-v -0.5 -0.5 0.5
-v 0.5 -0.5 0.5
-v 0.5 0.5 0.5
-v -0.5 0.5 0.5
-f 1 2 3
-f 1 3 4
-f 5 6 7
-f 5 7 8
-f 1 5 8
-f 1 8 4
-f 2 6 7
-f 2 7 3
-f 4 3 7
-f 4 7 8
-f 1 2 6
-f 1 6 5
-"""
-    output_path.write_text(cube_obj, encoding="utf-8")
-    return output_path
+
+def log_step(message: str) -> None:
+    """Print a consistently formatted step log line."""
+    print(f"[GenLab] {message}")
+
+
+def get_stem(path: str | Path) -> str:
+    """Return filename stem from path-like input."""
+    return Path(path).stem

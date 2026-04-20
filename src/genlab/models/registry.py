@@ -5,19 +5,21 @@ from genlab.models.instantmesh_adapter import InstantMeshAdapter
 from genlab.models.trellis_adapter import TrellisAdapter
 from genlab.models.triposr_adapter import TripoSRAdapter
 
+MODEL_REGISTRY = {
+    "triposr": TripoSRAdapter,
+    "instantmesh": InstantMeshAdapter,
+    "hunyuan3d": Hunyuan3DAdapter,
+    "trellis": TrellisAdapter,
+}
+
 
 def get_model(model_name: str, config: dict, dry_run: bool = True):
-    name = model_name.lower().strip()
+    name = model_name.strip().lower()
 
-    registry = {
-        "triposr": TripoSRAdapter,
-        "instantmesh": InstantMeshAdapter,
-        "hunyuan3d": Hunyuan3DAdapter,
-        "trellis": TrellisAdapter,
-    }
+    if name not in MODEL_REGISTRY:
+        supported = ", ".join(MODEL_REGISTRY.keys())
+        raise ValueError(
+            f"Unsupported model name '{model_name}'. Available models: {supported}"
+        )
 
-    if name not in registry:
-        supported = ", ".join(registry.keys())
-        raise ValueError(f"Unsupported model '{model_name}'. Supported models: {supported}")
-
-    return registry[name](config=config, dry_run=dry_run)
+    return MODEL_REGISTRY[name](config=config, dry_run=dry_run)

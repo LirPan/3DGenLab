@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 
-def calculate_mesh_metrics(mesh_path: str) -> dict:
+def evaluate_mesh(mesh_path: str | Path) -> dict:
     import trimesh
 
     mesh_file = Path(mesh_path)
@@ -22,3 +22,8 @@ def calculate_mesh_metrics(mesh_path: str) -> dict:
         "file_size_mb": round(mesh_file.stat().st_size / (1024 * 1024), 6),
     }
     return metrics
+
+
+def calculate_mesh_metrics(mesh_path: str | Path) -> dict:
+    """Backward-compatible alias."""
+    return evaluate_mesh(mesh_path)
