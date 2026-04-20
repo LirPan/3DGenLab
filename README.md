@@ -7,7 +7,7 @@
 - Hunyuan3D-2.1
 - TRELLIS
 
-Current status: dry-run only. Real model integration is intentionally deferred.
+Current status: dry-run pipeline is complete, and TripoSR real inference is integrated for GPU server execution.
 
 ## Local Development on Mac
 
@@ -91,9 +91,9 @@ python scripts/smoke_test.py
 
 Conda on Mac is only for lightweight local pipeline development. Real CUDA inference belongs on a Linux GPU server.
 
-## GPU Server Deployment Later
+## GPU Server Deployment
 
-Real model inference for TripoSR, InstantMesh, Hunyuan3D-2.1, and TRELLIS will be integrated later through repositories under `external/`, with separate GPU-ready environments.
+TripoSR real inference is integrated through `external/TripoSR` via subprocess calls. InstantMesh, Hunyuan3D-2.1, and TRELLIS remain dry-run placeholders in this stage.
 
 This repository does not train foundation models from scratch and does not vendor full upstream model source code.
 
@@ -106,7 +106,10 @@ Task 3 integrates only TripoSR real inference through the existing adapter-based
 - Local Mac workflow remains dry-run only (`configs/default.yaml`, `dry_run: true`).
 - Real TripoSR inference is enabled with `configs/triposr_gpu.yaml` (`dry_run: false`).
 - 3DGenLab does not install CUDA or TripoSR heavy dependencies automatically.
+- Use a dedicated environment for `external/TripoSR` dependencies, separate from the lightweight 3DGenLab environment.
 - If `external/TripoSR` is missing or the configured command fails, the pipeline exits with a clear error message.
+- Output mesh path convention is:
+  - `outputs/triposr/<input_stem>_triposr.obj`
 
 ### GPU Server Commands
 
@@ -126,6 +129,7 @@ python -m pip install -e .
 
 # 4) Install TripoSR GPU dependencies manually
 #    Follow upstream docs inside external/TripoSR
+#    Recommended: use a dedicated venv/conda env for TripoSR itself
 
 # 5) Run TripoSR real inference + benchmark
 python scripts/run_pipeline.py \

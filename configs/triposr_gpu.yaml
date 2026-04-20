@@ -12,8 +12,8 @@ models:
     output_dir: outputs/triposr
     task_type: image_to_3d
     inference:
-      command: python run.py --input {input_image} --output {output_dir}
-      expected_mesh: outputs/triposr/example_triposr.obj
+      command: python run.py {input_image} --output-dir {output_dir} --output-mesh {output_mesh}
+      expected_mesh: "{output_dir}/{input_stem}_triposr.obj"
   instantmesh:
     repo_path: external/InstantMesh
     output_dir: outputs/instantmesh
