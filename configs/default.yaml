@@ -1,0 +1,25 @@
+model_name: triposr
+input_image: inputs/images/example.png
+input_prompt: inputs/prompts/example.txt
+output_root: outputs
+dry_run: true
+render: false
+benchmark: true
+
+models:
+  triposr:
+    repo_path: external/TripoSR
+    output_dir: outputs/triposr
+    task_type: image_to_3d
+  instantmesh:
+    repo_path: external/InstantMesh
+    output_dir: outputs/instantmesh
+    task_type: image_to_3d
+  hunyuan3d:
+    repo_path: external/Hunyuan3D-2.1
+    output_dir: outputs/hunyuan3d
+    task_type: image_or_text_to_3d
+  trellis:
+    repo_path: external/TRELLIS
+    output_dir: outputs/trellis
+    task_type: image_or_text_to_3d
