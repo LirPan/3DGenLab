@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shlex
 import subprocess
+import shutil
 from pathlib import Path
 
 from genlab.models.base import Base3DGenModel
@@ -77,7 +78,17 @@ class TripoSRAdapter(Base3DGenModel):
             out_mesh = Path(expected_mesh_formatted)
             if not out_mesh.is_absolute():
                 out_mesh = Path.cwd() / out_mesh
-            ensure_dir(out_mesh.parent)
+        ensure_dir(out_mesh.parent)
+
+        generated_mesh_cfg = inference_cfg.get("generated_mesh", "{output_dir}/0/mesh.obj")
+        generated_mesh_formatted = generated_mesh_cfg.format(
+            input_stem=input_image_path.stem,
+            output_dir=str(out_dir.resolve()),
+        )
+        generated_mesh = Path(generated_mesh_formatted)
+        if not generated_mesh.is_absolute():
+            generated_mesh = Path.cwd() / generated_mesh
+        ensure_dir(generated_mesh.parent)
 
         out_dir_abs = out_dir.resolve()
         out_mesh_abs = out_mesh.resolve()
@@ -110,10 +121,17 @@ class TripoSRAdapter(Base3DGenModel):
                 "Please verify TripoSR dependencies and command flags in config."
             ) from exc
 
-        if not out_mesh_abs.exists():
+        if not generated_mesh.exists():
             raise FileNotFoundError(
-                "[TripoSR][real-mode] Command finished but expected mesh was not found: "
-                f"{out_mesh_abs}. Check models.triposr.inference.expected_mesh and command."
+                "[TripoSR][real-mode] Command finished but generated mesh was not found: "
+                f"{generated_mesh}. Check models.triposr.inference.generated_mesh and command."
+            )
+
+        if generated_mesh.resolve() != out_mesh_abs:
+            shutil.copy2(generated_mesh, out_mesh_abs)
+            log_step(
+                "[TripoSR][real-mode] Copied generated mesh to pipeline output path: "
+                f"{out_mesh_abs}"
             )
 
         return str(out_mesh_abs)

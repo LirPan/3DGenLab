@@ -7,7 +7,7 @@
 - Hunyuan3D-2.1
 - TRELLIS
 
-Current status: dry-run pipeline is complete, and TripoSR real inference is integrated for GPU server execution.
+Current status: dry-run pipeline is complete, and TripoSR + InstantMesh real inference are integrated for GPU server execution.
 
 ## Local Development on Mac
 
@@ -93,7 +93,7 @@ Conda on Mac is only for lightweight local pipeline development. Real CUDA infer
 
 ## GPU Server Deployment
 
-TripoSR real inference is integrated through `external/TripoSR` via subprocess calls. InstantMesh, Hunyuan3D-2.1, and TRELLIS remain dry-run placeholders in this stage.
+TripoSR and InstantMesh real inference are integrated through `external/TripoSR` and `external/InstantMesh` via subprocess calls. Hunyuan3D-2.1 and TRELLIS remain dry-run placeholders in this stage.
 
 This repository does not train foundation models from scratch and does not vendor full upstream model source code.
 
@@ -101,7 +101,7 @@ This repository does not train foundation models from scratch and does not vendo
 
 ## TripoSR Real Inference (GPU Only)
 
-Task 3 integrates only TripoSR real inference through the existing adapter-based pipeline.
+TripoSR real inference is integrated through the existing adapter-based pipeline.
 
 - Local Mac workflow remains dry-run only (`configs/default.yaml`, `dry_run: true`).
 - Real TripoSR inference is enabled with `configs/triposr_gpu.yaml` (`dry_run: false`).
@@ -111,6 +111,14 @@ Task 3 integrates only TripoSR real inference through the existing adapter-based
 - Output mesh path convention is:
   - `outputs/triposr/<input_stem>_triposr.obj`
 
+## InstantMesh Real Inference (GPU Only)
+
+- Use a dedicated environment for `external/InstantMesh` dependencies (for example `.venvs/instantmesh`).
+- If your server cannot reach `huggingface.co` directly, set `HF_ENDPOINT` (for example `https://hf-mirror.com`) via `models.instantmesh.inference.env` in `configs/triposr_gpu.yaml`.
+- Output mesh path convention is:
+  - `outputs/instantmesh/<input_stem>_instantmesh.obj`
+- Some diffusion stacks are sensitive to extremely small synthetic RGB images. Prefer a normal-resolution RGB input (or use `external/InstantMesh/examples/*.png` for smoke checks).
+
 ### GPU Server Commands
 
 ```bash
@@ -118,10 +126,10 @@ Task 3 integrates only TripoSR real inference through the existing adapter-based
 git clone <your-3dgenlab-repo-url>
 cd 3DGenLab
 
-# 2) Clone TripoSR only (idempotent)
+# 2) Clone external model repositories (idempotent)
 bash scripts/setup_external_repos.sh
 
-# 3) Prepare 3DGenLab environment
+# 3) Prepare 3DGenLab environment (lightweight, for YAML + pipeline + benchmark)
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
@@ -132,9 +140,20 @@ python -m pip install -e .
 #    Recommended: use a dedicated venv/conda env for TripoSR itself
 
 # 5) Run TripoSR real inference + benchmark
-python scripts/run_pipeline.py \
+HF_ENDPOINT=https://hf-mirror.com .venv/bin/python scripts/run_pipeline.py \
   --config configs/triposr_gpu.yaml \
   --model triposr \
   --input inputs/images/example.png \
+  --benchmark
+
+# 6) Install InstantMesh GPU dependencies manually
+#    Follow upstream docs inside external/InstantMesh
+#    Recommended: use a dedicated venv for InstantMesh (this repo uses .venvs/instantmesh)
+
+# 7) Run InstantMesh real inference + benchmark
+HF_ENDPOINT=https://hf-mirror.com .venv/bin/python scripts/run_pipeline.py \
+  --config configs/triposr_gpu.yaml \
+  --model instantmesh \
+  --input external/InstantMesh/examples/hatsune_miku.png \
   --benchmark
 ```

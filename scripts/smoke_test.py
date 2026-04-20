@@ -31,8 +31,11 @@ def _png_chunk(chunk_type: bytes, data: bytes) -> bytes:
 
 
 def _write_minimal_png(path: Path) -> None:
-    width = 1
-    height = 1
+    # Use a small but non-trivial RGB image. Some real-model stacks assume
+    # reasonable spatial resolution and RGB channel semantics; a 1x1 PNG can
+    # trigger edge-case failures even though it is valid PNG.
+    width = 256
+    height = 256
     bit_depth = 8
     color_type = 2  # RGB
     compression = 0
@@ -44,8 +47,19 @@ def _write_minimal_png(path: Path) -> None:
         + height.to_bytes(4, "big")
         + bytes([bit_depth, color_type, compression, filter_method, interlace])
     )
-    raw_scanline = b"\x00" + b"\xB4\xB4\xDC"  # no-filter + RGB pixel
-    idat = zlib.compress(raw_scanline)
+    raw_rows: list[bytes] = []
+    for y in range(height):
+        row = bytearray()
+        row.append(0)  # filter type: None
+        for x in range(width):
+            # Simple deterministic gradient (RGB)
+            r = (x * 255) // max(width - 1, 1)
+            g = (y * 255) // max(height - 1, 1)
+            b = ((x + y) * 255) // max(width + height - 2, 1)
+            row.extend((r, g, b))
+        raw_rows.append(bytes(row))
+    raw = b"".join(raw_rows)
+    idat = zlib.compress(raw)
 
     png = b"\x89PNG\r\n\x1a\n"
     png += _png_chunk(b"IHDR", ihdr)

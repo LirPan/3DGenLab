@@ -12,12 +12,19 @@ models:
     output_dir: outputs/triposr
     task_type: image_to_3d
     inference:
-      command: python run.py {input_image} --output-dir {output_dir} --output-mesh {output_mesh}
+      command: python run.py {input_image} --output-dir {output_dir}
+      generated_mesh: "{output_dir}/0/mesh.obj"
       expected_mesh: "{output_dir}/{input_stem}_triposr.obj"
   instantmesh:
     repo_path: external/InstantMesh
     output_dir: outputs/instantmesh
     task_type: image_to_3d
+    inference:
+      command: ../../.venvs/instantmesh/bin/python run.py configs/instant-mesh-large.yaml {input_image} --output_path {output_dir} --no_rembg
+      generated_mesh: "{output_dir}/instant-mesh-large/meshes/{input_stem}.obj"
+      expected_mesh: "{output_dir}/{input_stem}_instantmesh.obj"
+      env:
+        HF_ENDPOINT: https://hf-mirror.com
   hunyuan3d:
     repo_path: external/Hunyuan3D-2.1
     output_dir: outputs/hunyuan3d
