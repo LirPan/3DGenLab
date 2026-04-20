@@ -2,7 +2,7 @@ model_name: triposr
 input_image: inputs/images/example.png
 input_prompt: inputs/prompts/example.txt
 output_root: outputs
-dry_run: true
+dry_run: false
 render: false
 benchmark: true
 

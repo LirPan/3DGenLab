@@ -98,3 +98,39 @@ Real model inference for TripoSR, InstantMesh, Hunyuan3D-2.1, and TRELLIS will b
 This repository does not train foundation models from scratch and does not vendor full upstream model source code.
 
 `external/` and `outputs/` are git-ignored by design.
+
+## TripoSR Real Inference (GPU Only)
+
+Task 3 integrates only TripoSR real inference through the existing adapter-based pipeline.
+
+- Local Mac workflow remains dry-run only (`configs/default.yaml`, `dry_run: true`).
+- Real TripoSR inference is enabled with `configs/triposr_gpu.yaml` (`dry_run: false`).
+- 3DGenLab does not install CUDA or TripoSR heavy dependencies automatically.
+- If `external/TripoSR` is missing or the configured command fails, the pipeline exits with a clear error message.
+
+### GPU Server Commands
+
+```bash
+# 1) Clone this repository
+git clone <your-3dgenlab-repo-url>
+cd 3DGenLab
+
+# 2) Clone TripoSR only (idempotent)
+bash scripts/setup_external_repos.sh
+
+# 3) Prepare 3DGenLab environment
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e .
+
+# 4) Install TripoSR GPU dependencies manually
+#    Follow upstream docs inside external/TripoSR
+
+# 5) Run TripoSR real inference + benchmark
+python scripts/run_pipeline.py \
+  --config configs/triposr_gpu.yaml \
+  --model triposr \
+  --input inputs/images/example.png \
+  --benchmark
+```
