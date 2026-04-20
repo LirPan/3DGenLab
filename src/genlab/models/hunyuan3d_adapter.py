@@ -25,7 +25,7 @@ class Hunyuan3DAdapter(Base3DGenModel):
         model_cfg = self.config["models"]["hunyuan3d"]
         out_dir = Path(output_dir or model_cfg["output_dir"])
         ensure_dir(out_dir)
-        out_mesh = out_dir / "hunyuan3d_result.obj"
+        out_mesh = out_dir / "example_hunyuan3d.obj"
 
         if self.dry_run:
             write_dummy_cube_obj(out_mesh)

@@ -9,23 +9,28 @@
 
 Current status: dry-run only. Real model integration is intentionally deferred.
 
-## Setup
+## Local Development on Mac
+
+This repository is designed to run lightweight dry-run development on macOS (including MacBook Air). It does not run real CUDA inference locally.
+
+Dry-run mode only generates dummy cube meshes for pipeline validation.
+
+The package uses a `src/` layout and is defined in `pyproject.toml` as package `genlab`.
+
+## Quick Start
 
 Python 3.9+ is required.
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
+bash scripts/bootstrap.sh
+python scripts/smoke_test.py
 ```
 
-The package uses a `src/` layout and is defined in `pyproject.toml` as package `genlab`.
+## Dry-run Mode
 
-## Dry-Run Usage
+Dry-run mode does not call external model repositories. It writes a valid dummy cube OBJ (8 vertices, 12 triangular faces) for each model adapter.
 
-Dry-run mode does not call external model code. It creates a dummy cube OBJ (8 vertices, 12 triangular faces).
-
-Run one model:
+Run one model in dry-run mode:
 
 ```bash
 python scripts/run_pipeline.py \
@@ -37,7 +42,7 @@ python scripts/run_pipeline.py \
   --benchmark
 ```
 
-Run all models:
+Run all models in dry-run mode:
 
 ```bash
 python scripts/run_all_models.py \
@@ -48,15 +53,12 @@ python scripts/run_all_models.py \
   --benchmark
 ```
 
-## Benchmark Usage
+Expected dry-run meshes:
 
-Generate a JSON report for one mesh:
-
-```bash
-python scripts/benchmark.py \
-  --mesh outputs/triposr/triposr_result.obj \
-  --output-report outputs/reports/triposr_metrics.json
-```
+- `outputs/triposr/example_triposr.obj`
+- `outputs/instantmesh/example_instantmesh.obj`
+- `outputs/hunyuan3d/example_hunyuan3d.obj`
+- `outputs/trellis/example_trellis.obj`
 
 ## Smoke Test
 
@@ -66,29 +68,33 @@ Run an end-to-end local smoke check:
 python scripts/smoke_test.py
 ```
 
-What it does:
+What smoke test validates:
 
 - creates `inputs/images/example.png` if missing
 - creates `inputs/prompts/example.txt` if missing
-- runs all 4 model adapters in dry-run mode
-- benchmarks each generated mesh
-- verifies 4 OBJ files and 4 JSON reports exist
+- runs all 4 adapters in dry-run mode
+- writes 4 OBJ files to model-specific output folders
+- writes benchmark reports to `outputs/reports/smoke_*_metrics.json`
 - prints `SMOKE TEST PASSED` on success
 
-## Expected Outputs
+## Optional Conda Setup
 
-Dry-run outputs are written to model-specific folders:
+If you prefer Miniforge/Conda on Mac:
 
-- `outputs/triposr/`
-- `outputs/instantmesh/`
-- `outputs/hunyuan3d/`
-- `outputs/trellis/`
+```bash
+conda create -n genlab python=3.10 -y
+conda activate genlab
+python -m pip install --upgrade pip
+python -m pip install -e .
+python scripts/smoke_test.py
+```
 
-Benchmark reports are written to `outputs/reports/`.
+Conda on Mac is only for lightweight local pipeline development. Real CUDA inference belongs on a Linux GPU server.
 
-## External Repositories
+## GPU Server Deployment Later
 
-Real model integration will be added later by wiring commands to repositories under `external/`.
-This project does not vendor or copy upstream model source code.
+Real model inference for TripoSR, InstantMesh, Hunyuan3D-2.1, and TRELLIS will be integrated later through repositories under `external/`, with separate GPU-ready environments.
+
+This repository does not train foundation models from scratch and does not vendor full upstream model source code.
 
 `external/` and `outputs/` are git-ignored by design.

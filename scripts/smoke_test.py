@@ -16,6 +16,12 @@ from genlab.models.registry import get_model
 from genlab.utils import ensure_dir, ensure_parent_dir, load_yaml_config, log_step
 
 ALL_MODELS = ["triposr", "instantmesh", "hunyuan3d", "trellis"]
+EXPECTED_MESHES = {
+    "triposr": "outputs/triposr/example_triposr.obj",
+    "instantmesh": "outputs/instantmesh/example_instantmesh.obj",
+    "hunyuan3d": "outputs/hunyuan3d/example_hunyuan3d.obj",
+    "trellis": "outputs/trellis/example_trellis.obj",
+}
 
 
 def _png_chunk(chunk_type: bytes, data: bytes) -> bytes:
@@ -69,9 +75,6 @@ def main() -> int:
         image_path, prompt_path = _ensure_example_inputs()
         reports_dir = ensure_dir(ROOT / "outputs" / "reports")
 
-        created_meshes: list[Path] = []
-        created_reports: list[Path] = []
-
         for model_name in ALL_MODELS:
             log_step(f"[Smoke] Running dry-run for {model_name}")
             output_dir = ensure_dir(ROOT / config["models"][model_name]["output_dir"])
@@ -87,17 +90,17 @@ def main() -> int:
             metrics = evaluate_mesh(mesh_path)
             report_path = reports_dir / f"smoke_{model_name}_metrics.json"
             report_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
-            created_meshes.append(mesh_path)
-            created_reports.append(report_path)
             log_step(f"[Smoke] Created mesh/report for {model_name}")
 
-        missing_meshes = [str(path) for path in created_meshes if not path.exists()]
-        missing_reports = [str(path) for path in created_reports if not path.exists()]
-        if len(created_meshes) != 4 or len(created_reports) != 4:
-            raise RuntimeError("Expected 4 meshes and 4 reports from smoke test.")
-        if missing_meshes or missing_reports:
+        expected_mesh_paths = [ROOT / rel_path for rel_path in EXPECTED_MESHES.values()]
+        missing_meshes = [str(path) for path in expected_mesh_paths if not path.exists()]
+        if missing_meshes:
+            raise RuntimeError(f"Missing expected smoke meshes: {missing_meshes}")
+
+        report_files = sorted(reports_dir.glob("smoke_*_metrics.json"))
+        if len(report_files) != 4:
             raise RuntimeError(
-                f"Missing outputs. Meshes: {missing_meshes}, Reports: {missing_reports}"
+                f"Expected 4 smoke reports in {reports_dir}, found {len(report_files)}"
             )
 
         print("SMOKE TEST PASSED")

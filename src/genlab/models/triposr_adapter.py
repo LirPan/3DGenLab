@@ -25,7 +25,7 @@ class TripoSRAdapter(Base3DGenModel):
         model_cfg = self.config["models"]["triposr"]
         out_dir = Path(output_dir or model_cfg["output_dir"])
         ensure_dir(out_dir)
-        out_mesh = out_dir / "triposr_result.obj"
+        out_mesh = out_dir / "example_triposr.obj"
 
         if self.dry_run:
             write_dummy_cube_obj(out_mesh)
