@@ -7,7 +7,7 @@
 - Hunyuan3D-2.1
 - TRELLIS
 
-Current status: dry-run pipeline is complete, and TripoSR + InstantMesh real inference are integrated for GPU server execution.
+Current status: dry-run pipeline is complete, and TripoSR + InstantMesh + **Hunyuan3D-2.1 (shape / text→T2I→shape)** real inference hooks are integrated for GPU server execution.
 
 ## Local Development on Mac
 
@@ -93,7 +93,7 @@ Conda on Mac is only for lightweight local pipeline development. Real CUDA infer
 
 ## GPU Server Deployment
 
-TripoSR and InstantMesh real inference are integrated through `external/TripoSR` and `external/InstantMesh` via subprocess calls. Hunyuan3D-2.1 and TRELLIS remain dry-run placeholders in this stage.
+TripoSR, InstantMesh, and Hunyuan3D-2.1 real inference are integrated via subprocess calls into `external/*` checkouts. TRELLIS remains a dry-run placeholder in this stage.
 
 This repository does not train foundation models from scratch and does not vendor full upstream model source code.
 
@@ -118,6 +118,18 @@ TripoSR real inference is integrated through the existing adapter-based pipeline
 - Output mesh path convention is:
   - `outputs/instantmesh/<input_stem>_instantmesh.obj`
 - Some diffusion stacks are sensitive to extremely small synthetic RGB images. Prefer a normal-resolution RGB input (or use `external/InstantMesh/examples/*.png` for smoke checks).
+
+## Hunyuan3D-2.1 Real Inference (GPU Only)
+
+Hunyuan3D-2.1 is wired like the other models: the adapter runs a **headless shape pipeline** (untreated mesh as OBJ) via [`scripts/hunyuan3d_genlab_infer.py`](scripts/hunyuan3d_genlab_infer.py) inside `external/Hunyuan3D-2.1`. This avoids the full Gradio stack and skips upstream **texture / PBR** compilation by default (only geometry for the benchmark path).
+
+- **External checkout**: `bash scripts/setup_external_repos.sh` clones `external/Hunyuan3D-2.1` (SSH, same pattern as TripoSR / InstantMesh).
+- **Dedicated venv**: use `.venvs/hunyuan3d` (or your own) with PyTorch + deps from upstream [`external/Hunyuan3D-2.1/requirements.txt`](external/Hunyuan3D-2.1/requirements.txt). Upstream documents Python 3.10 and CUDA PyTorch (see their README). Shape-only usage still needs `hy3dshape`, `diffusers`, `rembg` / `onnxruntime`, `trimesh`, etc.
+- **HF mirror**: `models.hunyuan3d.inference.env.HF_ENDPOINT` is set to `https://hf-mirror.com` in YAML (same idea as InstantMesh).
+- **Outputs**: `outputs/hunyuan3d/<stem>_hunyuan3d.obj`
+- **Image vs text**:
+  - **Image-conditioned** (default): set `models.hunyuan3d.inference.prefer: image` (default). Uses `command_image`.
+  - **Text-conditioned**: uses HunyuanDiT **text-to-image** (same Hub id as upstream Gradio: `Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled`), then shape generation. If your config still has both `input_image` and a prompt, set `prefer: text` so the prompt wins, **or** set `input_image: null` in YAML for a text-only run.
 
 ### GPU Server Commands
 
@@ -155,5 +167,21 @@ HF_ENDPOINT=https://hf-mirror.com .venv/bin/python scripts/run_pipeline.py \
   --config configs/triposr_gpu.yaml \
   --model instantmesh \
   --input external/InstantMesh/examples/hatsune_miku.png \
+  --benchmark
+
+# 8) Install Hunyuan3D-2.1 dependencies in .venvs/hunyuan3d (follow upstream README / requirements.txt)
+
+# 9) Image → shape (real) + benchmark
+HF_ENDPOINT=https://hf-mirror.com .venv/bin/python scripts/run_pipeline.py \
+  --config configs/triposr_gpu.yaml \
+  --model hunyuan3d \
+  --input inputs/images/example.png \
+  --benchmark
+
+# 10) Text → shape (real): dedicated config (no input image; uses prompt file or --prompt)
+HF_ENDPOINT=https://hf-mirror.com .venv/bin/python scripts/run_pipeline.py \
+  --config configs/hunyuan3d_text_gpu.yaml \
+  --model hunyuan3d \
+  --prompt "a red ceramic mug on white background" \
   --benchmark
 ```

@@ -19,7 +19,16 @@ else
     git clone git@github.com:TencentARC/InstantMesh.git external/InstantMesh
 fi
 
+if [ -d "external/Hunyuan3D-2.1/.git" ]; then
+  echo "[Setup] external/Hunyuan3D-2.1 already exists. Skipping clone."
+else
+  echo "[Setup] Cloning Hunyuan3D-2.1 into external/Hunyuan3D-2.1 ..."
+  GIT_SSH_COMMAND='ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no' \
+    git clone git@github.com:Tencent-Hunyuan/Hunyuan3D-2.1.git external/Hunyuan3D-2.1
+fi
+
 echo "[Setup] Done. External repositories are ready:"
 echo "  - external/TripoSR"
 echo "  - external/InstantMesh"
+echo "  - external/Hunyuan3D-2.1"
 echo "[Setup] Next: install each model's GPU dependencies in its dedicated environment."
