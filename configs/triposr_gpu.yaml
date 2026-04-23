@@ -12,16 +12,31 @@ models:
     output_dir: outputs/triposr
     task_type: image_to_3d
     inference:
-      command: python run.py --input {input_image} --output {output_dir}
-      expected_mesh: outputs/triposr/example_triposr.obj
+      command: ../../.venvs/triposr/bin/python run.py {input_image} --output-dir {output_dir} --no-remove-bg
+      generated_mesh: "{output_dir}/0/mesh.obj"
+      expected_mesh: "{output_dir}/{input_stem}_triposr.obj"
   instantmesh:
     repo_path: external/InstantMesh
     output_dir: outputs/instantmesh
     task_type: image_to_3d
+    inference:
+      command: ../../.venvs/instantmesh/bin/python run.py configs/instant-mesh-large.yaml {input_image} --output_path {output_dir} --no_rembg
+      generated_mesh: "{output_dir}/instant-mesh-large/meshes/{input_stem}.obj"
+      expected_mesh: "{output_dir}/{input_stem}_instantmesh.obj"
+      env:
+        HF_ENDPOINT: https://hf-mirror.com
   hunyuan3d:
     repo_path: external/Hunyuan3D-2.1
     output_dir: outputs/hunyuan3d
     task_type: image_or_text_to_3d
+    inference:
+      prefer: image
+      command_image: ../../.venvs/hunyuan3d/bin/python ../../scripts/hunyuan3d_genlab_infer.py --repo . --mode image --image {input_image} --output-mesh {output_mesh} --model-path tencent/Hunyuan3D-2.1 --subfolder hunyuan3d-dit-v2-1 --device cuda
+      command_text: ../../.venvs/hunyuan3d/bin/python ../../scripts/hunyuan3d_genlab_infer.py --repo . --mode text --prompt-file {prompt_file} --output-mesh {output_mesh} --model-path tencent/Hunyuan3D-2.1 --subfolder hunyuan3d-dit-v2-1 --device cuda
+      generated_mesh: "{output_dir}/{input_stem}_hunyuan3d.obj"
+      expected_mesh: "{output_dir}/{input_stem}_hunyuan3d.obj"
+      env:
+        HF_ENDPOINT: https://hf-mirror.com
   trellis:
     repo_path: external/TRELLIS
     output_dir: outputs/trellis

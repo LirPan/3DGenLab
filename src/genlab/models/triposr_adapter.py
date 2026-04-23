@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shlex
 import subprocess
+import shutil
 from pathlib import Path
 
 from genlab.models.base import Base3DGenModel
@@ -18,6 +19,14 @@ class TripoSRAdapter(Base3DGenModel):
     def setup(self) -> None:
         log_step("[TripoSR] setup complete (placeholder)")
 
+    def _build_output_mesh_path(
+        self,
+        out_dir: Path,
+        input_image: str | None,
+    ) -> Path:
+        input_stem = Path(input_image).stem if input_image else "example"
+        return out_dir / f"{input_stem}_triposr.obj"
+
     def generate(
         self,
         input_image: str | None = None,
@@ -27,7 +36,7 @@ class TripoSRAdapter(Base3DGenModel):
         model_cfg = self.config["models"]["triposr"]
         out_dir = Path(output_dir or model_cfg["output_dir"])
         ensure_dir(out_dir)
-        out_mesh = out_dir / "example_triposr.obj"
+        out_mesh = self._build_output_mesh_path(out_dir=out_dir, input_image=input_image)
 
         if self.dry_run:
             write_dummy_cube_obj(out_mesh)
@@ -46,6 +55,12 @@ class TripoSRAdapter(Base3DGenModel):
                 "[TripoSR][real-mode] input_image is required. "
                 "Provide --input <image_path> or set input_image in config."
             )
+        input_image_path = Path(input_image).resolve()
+        if not input_image_path.exists():
+            raise FileNotFoundError(
+                "[TripoSR][real-mode] input_image was not found: "
+                f"{input_image_path}"
+            )
 
         inference_cfg = model_cfg.get("inference", {})
         command_template = inference_cfg.get("command")
@@ -56,15 +71,30 @@ class TripoSRAdapter(Base3DGenModel):
 
         expected_mesh_cfg = inference_cfg.get("expected_mesh")
         if expected_mesh_cfg:
-            out_mesh = Path(expected_mesh_cfg)
+            expected_mesh_formatted = expected_mesh_cfg.format(
+                input_stem=input_image_path.stem,
+                output_dir=str(out_dir.resolve()),
+            )
+            out_mesh = Path(expected_mesh_formatted)
             if not out_mesh.is_absolute():
                 out_mesh = Path.cwd() / out_mesh
-            ensure_dir(out_mesh.parent)
+        ensure_dir(out_mesh.parent)
+
+        generated_mesh_cfg = inference_cfg.get("generated_mesh", "{output_dir}/0/mesh.obj")
+        generated_mesh_formatted = generated_mesh_cfg.format(
+            input_stem=input_image_path.stem,
+            output_dir=str(out_dir.resolve()),
+        )
+        generated_mesh = Path(generated_mesh_formatted)
+        if not generated_mesh.is_absolute():
+            generated_mesh = Path.cwd() / generated_mesh
+        ensure_dir(generated_mesh.parent)
 
         out_dir_abs = out_dir.resolve()
         out_mesh_abs = out_mesh.resolve()
         cmd = command_template.format(
-            input_image=str(Path(input_image).resolve()),
+            input_image=str(input_image_path),
+            input_stem=input_image_path.stem,
             output_dir=str(out_dir_abs),
             output_mesh=str(out_mesh_abs),
         )
@@ -91,10 +121,17 @@ class TripoSRAdapter(Base3DGenModel):
                 "Please verify TripoSR dependencies and command flags in config."
             ) from exc
 
-        if not out_mesh_abs.exists():
+        if not generated_mesh.exists():
             raise FileNotFoundError(
-                "[TripoSR][real-mode] Command finished but expected mesh was not found: "
-                f"{out_mesh_abs}. Check models.triposr.inference.expected_mesh and command."
+                "[TripoSR][real-mode] Command finished but generated mesh was not found: "
+                f"{generated_mesh}. Check models.triposr.inference.generated_mesh and command."
+            )
+
+        if generated_mesh.resolve() != out_mesh_abs:
+            shutil.copy2(generated_mesh, out_mesh_abs)
+            log_step(
+                "[TripoSR][real-mode] Copied generated mesh to pipeline output path: "
+                f"{out_mesh_abs}"
             )
 
         return str(out_mesh_abs)
