@@ -35,6 +35,13 @@ logs/
 # OS junk
 .DS_Store
 
+# Local archives / wheelhouses
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.whl
+
 # Model files and binaries
 *.ckpt
 *.safetensors

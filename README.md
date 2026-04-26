@@ -7,7 +7,7 @@
 - Hunyuan3D-2.1
 - TRELLIS
 
-Current status: dry-run pipeline is complete, and TripoSR + InstantMesh + **Hunyuan3D-2.1 (shape / text→T2I→shape)** real inference hooks are integrated for GPU server execution.
+Current status: dry-run pipeline is complete, and TripoSR + InstantMesh + **Hunyuan3D-2.1 (shape / text→T2I→shape)** + **TRELLIS (headless image/text entrypoint)** are integrated via adapter subprocess hooks for GPU server execution.
 
 ## Local Development on Mac
 
@@ -77,6 +77,46 @@ What smoke test validates:
 - writes benchmark reports to `outputs/reports/smoke_*_metrics.json`
 - prints `SMOKE TEST PASSED` on success
 
+## Evaluation Dataset Layout
+
+For practical multi-model comparison, this repository now uses a small dataset plan under `dataset/`:
+
+- `dataset/images/`: image-conditioned cases (shared baseline across models)
+- `dataset/prompts/`: text extension cases
+- `dataset/metadata/cases.json`: case definitions (`case_id`, `type`, `input_path`, `group`, `category`, `intended_models`)
+
+Groups:
+
+- `main_image_set` (4): `robot.png`, `chair.png`, `sneaker.png`, `mug.png`
+- `text_extension_set` (2): `robot_lowpoly.txt`, `treasure_chest.txt`
+- `challenge_set` (2): `glass.png`, `lamp.png`
+
+Notes:
+
+- `inputs/` remains the smoke-test compatibility entry.
+- `dataset/` is the recommended entry for formal evaluation and README/GitHub demos.
+- Current image files in `dataset/images/` are lightweight placeholders and can be replaced in-place.
+
+Quick examples:
+
+```bash
+# Single model dry-run on dataset image case
+python scripts/run_pipeline.py \
+  --config configs/default.yaml \
+  --model triposr \
+  --input dataset/images/robot.png \
+  --dry-run \
+  --benchmark
+
+# Text extension dry-run (for text-capable adapters)
+python scripts/run_pipeline.py \
+  --config configs/default.yaml \
+  --model trellis \
+  --prompt dataset/prompts/robot_lowpoly.txt \
+  --dry-run \
+  --benchmark
+```
+
 ## Optional Conda Setup
 
 If you prefer Miniforge/Conda on Mac:
@@ -91,13 +131,33 @@ python scripts/smoke_test.py
 
 Conda on Mac is only for lightweight local pipeline development. Real CUDA inference belongs on a Linux GPU server.
 
+## Real Model Rollout Order (main/text/challenge)
+
+Recommended execution order for stable server experiments:
+
+1. Run `main_image_set` first for all four models (baseline matrix).
+2. Run `text_extension_set` for text-capable models (`hunyuan3d`, `trellis`).
+3. Run `challenge_set` for failure analysis (transparent/thin structures).
+4. Aggregate reports from `outputs/reports` for cross-model summary.
+
 ## GPU Server Deployment
 
-TripoSR, InstantMesh, and Hunyuan3D-2.1 real inference are integrated via subprocess calls into `external/*` checkouts. TRELLIS remains a dry-run placeholder in this stage.
+TripoSR, InstantMesh, Hunyuan3D-2.1, and TRELLIS real inference are integrated via subprocess calls into `external/*` checkouts. TRELLIS uses a lightweight headless helper (`scripts/trellis_genlab_infer.py`) and keeps dry-run behavior unchanged for local development.
 
 This repository does not train foundation models from scratch and does not vendor full upstream model source code.
 
 `external/` and `outputs/` are git-ignored by design.
+
+## Supported Models (Current Status)
+
+- TripoSR: dry-run + real image-to-3D (adapter integrated; server env currently blocked if `.venvs/triposr` was copied from another machine)
+- InstantMesh: dry-run + real image-to-3D (adapter integrated; server env currently blocked if `.venvs/instantmesh` was copied from another machine)
+- Hunyuan3D-2.1: dry-run + real image/text-to-3D (adapter integrated; server env currently needs complete Python deps such as `timm`)
+- TRELLIS: dry-run + real image/text headless entrypoint (**verified on server**)
+
+All adapters normalize final outputs into:
+
+- `outputs/<model_name>/<input_stem>_<model_name>.obj`
 
 ## TripoSR Real Inference (GPU Only)
 
@@ -107,6 +167,7 @@ TripoSR real inference is integrated through the existing adapter-based pipeline
 - Real TripoSR inference is enabled with `configs/triposr_gpu.yaml` (`dry_run: false`).
 - 3DGenLab does not install CUDA or TripoSR heavy dependencies automatically.
 - Use a dedicated environment for `external/TripoSR` dependencies, separate from the lightweight 3DGenLab environment.
+- Ensure the interpreter in `models.triposr.inference.command` points to a venv created on this server. If you copied `.venvs/triposr` from another machine, `bin/python` may be a broken absolute symlink.
 - If `external/TripoSR` is missing or the configured command fails, the pipeline exits with a clear error message.
 - Output mesh path convention is:
   - `outputs/triposr/<input_stem>_triposr.obj`
@@ -114,7 +175,9 @@ TripoSR real inference is integrated through the existing adapter-based pipeline
 ## InstantMesh Real Inference (GPU Only)
 
 - Use a dedicated environment for `external/InstantMesh` dependencies (for example `.venvs/instantmesh`).
+- Ensure the interpreter in `models.instantmesh.inference.command` points to a local, valid Python binary. Copied venvs can fail with `No such file or directory` even when the file exists.
 - If your server cannot reach `huggingface.co` directly, set `HF_ENDPOINT` (for example `https://hf-mirror.com`) via `models.instantmesh.inference.env` in `configs/triposr_gpu.yaml`.
+- InstantMesh runtime still needs online/offline access to model assets (for example `sudo-ai/zero123plus-v1.2` and `TencentARC/InstantMesh` files). If the server cannot reach Hugging Face or mirror endpoints, prepare local model cache first.
 - Output mesh path convention is:
   - `outputs/instantmesh/<input_stem>_instantmesh.obj`
 - Some diffusion stacks are sensitive to extremely small synthetic RGB images. Prefer a normal-resolution RGB input (or use `external/InstantMesh/examples/*.png` for smoke checks).
@@ -126,6 +189,8 @@ Hunyuan3D-2.1 is wired like the other models: the adapter runs a **headless shap
 - **External checkout**: `bash scripts/setup_external_repos.sh` clones `external/Hunyuan3D-2.1` (SSH, same pattern as TripoSR / InstantMesh).
 - **Dedicated venv**: use `.venvs/hunyuan3d` (or your own) with PyTorch + deps from upstream [`external/Hunyuan3D-2.1/requirements.txt`](external/Hunyuan3D-2.1/requirements.txt). Upstream documents Python 3.10 and CUDA PyTorch (see their README). Shape-only usage still needs `hy3dshape`, `diffusers`, `rembg` / `onnxruntime`, `trimesh`, etc.
 - **HF mirror**: `models.hunyuan3d.inference.env.HF_ENDPOINT` is set to `https://hf-mirror.com` in YAML (same idea as InstantMesh).
+- **Runtime isolation**: the default GPU config runs Hunyuan via `env -u LD_LIBRARY_PATH` to avoid host-level Qt/GL library pollution during `pymeshlab` import.
+- **Common missing deps**: if you see `ModuleNotFoundError` (for example `timm`), install missing packages into `.venvs/hunyuan3d` following upstream requirements.
 - **Outputs**: `outputs/hunyuan3d/<stem>_hunyuan3d.obj`
 - **Image vs text**:
   - **Image-conditioned** (default): set `models.hunyuan3d.inference.prefer: image` (default). Uses `command_image`.
@@ -185,3 +250,9 @@ HF_ENDPOINT=https://hf-mirror.com .venv/bin/python scripts/run_pipeline.py \
   --prompt "a red ceramic mug on white background" \
   --benchmark
 ```
+
+## Server Troubleshooting (Current)
+
+- `No such file or directory` for `.venvs/<model>/bin/python` usually means the venv was copied from another host and contains broken absolute symlinks. Recreate that venv on this server.
+- Hunyuan3D failures around `pymeshlab`/Qt are typically host runtime conflicts; keep `LD_LIBRARY_PATH` isolated for the inference command.
+- If Hunyuan3D reports `ModuleNotFoundError` (for example `timm`), install missing dependencies in `.venvs/hunyuan3d`.
