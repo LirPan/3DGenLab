@@ -58,6 +58,7 @@ def _print_summary(rows: list[dict]) -> None:
 def main() -> int:
     args = parse_args()
     config = load_yaml_config(args.config)
+    configured_models = config.get("models", {})
 
     input_image = args.input or config.get("input_image")
     input_prompt = _resolve_prompt(args.prompt) or _resolve_prompt(config.get("input_prompt"))
@@ -76,10 +77,19 @@ def main() -> int:
     summary_rows: list[dict] = []
     failed = False
 
-    for model_name in ALL_MODELS:
+    models_to_run = [m for m in ALL_MODELS if m in configured_models]
+    if not models_to_run:
+        raise ValueError(
+            f"No supported models found in config.models. Supported: {', '.join(ALL_MODELS)}"
+        )
+    skipped_models = [m for m in ALL_MODELS if m not in configured_models]
+    if skipped_models:
+        log_step(f"[RunAll] Skipping undefined models in config: {', '.join(skipped_models)}")
+
+    for model_name in models_to_run:
         log_step(f"[RunAll] Running model: {model_name}")
         try:
-            model_output = ensure_dir(config["models"][model_name]["output_dir"])
+            model_output = ensure_dir(configured_models[model_name]["output_dir"])
             model = get_model(model_name=model_name, config=config, dry_run=dry_run)
             model.setup()
             mesh_path = model.generate(

@@ -1,0 +1,84 @@
+{
+  "version": "v1",
+  "description": "Small practical evaluation set for multi-model 3D generation comparison.",
+  "groups": {
+    "main_image_set": {
+      "goal": "Shared image-conditioned baseline for fair cross-model comparison.",
+      "size": 4
+    },
+    "text_extension_set": {
+      "goal": "Small text-conditioned extension for models with strong text-to-3D path.",
+      "size": 2
+    },
+    "challenge_set": {
+      "goal": "Failure-analysis subset focused on hard materials and structures.",
+      "size": 2
+    }
+  },
+  "cases": [
+    {
+      "case_id": "img_robot",
+      "type": "image",
+      "input_path": "dataset/images/robot.png",
+      "group": "main_image_set",
+      "category": "character_object",
+      "intended_models": ["triposr", "instantmesh", "hunyuan3d", "trellis"]
+    },
+    {
+      "case_id": "img_chair",
+      "type": "image",
+      "input_path": "dataset/images/chair.png",
+      "group": "main_image_set",
+      "category": "furniture",
+      "intended_models": ["triposr", "instantmesh", "hunyuan3d", "trellis"]
+    },
+    {
+      "case_id": "img_sneaker",
+      "type": "image",
+      "input_path": "dataset/images/sneaker.png",
+      "group": "main_image_set",
+      "category": "footwear",
+      "intended_models": ["triposr", "instantmesh", "hunyuan3d", "trellis"]
+    },
+    {
+      "case_id": "img_mug",
+      "type": "image",
+      "input_path": "dataset/images/mug.png",
+      "group": "main_image_set",
+      "category": "household_object",
+      "intended_models": ["triposr", "instantmesh", "hunyuan3d", "trellis"]
+    },
+    {
+      "case_id": "txt_robot_lowpoly",
+      "type": "text",
+      "input_path": "dataset/prompts/robot_lowpoly.txt",
+      "group": "text_extension_set",
+      "category": "stylized_robot",
+      "intended_models": ["hunyuan3d", "trellis"]
+    },
+    {
+      "case_id": "txt_treasure_chest",
+      "type": "text",
+      "input_path": "dataset/prompts/treasure_chest.txt",
+      "group": "text_extension_set",
+      "category": "fantasy_prop",
+      "intended_models": ["hunyuan3d", "trellis"]
+    },
+    {
+      "case_id": "chal_glass",
+      "type": "image",
+      "input_path": "dataset/images/glass.png",
+      "group": "challenge_set",
+      "category": "transparent_object",
+      "intended_models": ["triposr", "instantmesh", "hunyuan3d", "trellis"]
+    },
+    {
+      "case_id": "chal_lamp",
+      "type": "image",
+      "input_path": "dataset/images/lamp.png",
+      "group": "challenge_set",
+      "category": "thin_structure_object",
+      "intended_models": ["triposr", "instantmesh", "hunyuan3d", "trellis"]
+    }
+  ]
+}

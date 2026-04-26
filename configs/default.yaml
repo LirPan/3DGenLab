@@ -41,3 +41,10 @@ models:
     repo_path: external/TRELLIS
     output_dir: outputs/trellis
     task_type: image_or_text_to_3d
+    inference:
+      prefer: image
+      command_image: "{project_root}/.venvs/trellis310/bin/python {project_root}/scripts/trellis_genlab_infer.py --repo . --mode image --image {input_image} --output-mesh {output_mesh} --model-path {model_path} --device cuda"
+      command_text: "{project_root}/.venvs/trellis310/bin/python {project_root}/scripts/trellis_genlab_infer.py --repo . --mode text --prompt-file {prompt_file} --output-mesh {output_mesh} --model-path {model_path} --device cuda"
+      generated_mesh: "{output_dir}/{input_stem}_trellis.obj"
+      expected_mesh: "{output_dir}/{input_stem}_trellis.obj"
+      model_path: /DATA/disk1/yjh/workspace0/data/genlab-models/microsoft/TRELLIS-image-large

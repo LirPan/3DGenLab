@@ -97,6 +97,7 @@ class TripoSRAdapter(Base3DGenModel):
             input_stem=input_image_path.stem,
             output_dir=str(out_dir_abs),
             output_mesh=str(out_mesh_abs),
+            project_root=str(Path(__file__).resolve().parents[3]),
         )
         log_step(f"[TripoSR][real-mode] Running command: {cmd}")
         try:
@@ -111,6 +112,13 @@ class TripoSRAdapter(Base3DGenModel):
                 log_step(f"[TripoSR][real-mode] stdout:\n{completed.stdout.strip()}")
             if completed.stderr.strip():
                 log_step(f"[TripoSR][real-mode] stderr:\n{completed.stderr.strip()}")
+        except FileNotFoundError as exc:
+            raise RuntimeError(
+                "[TripoSR][real-mode] Python interpreter/command not found.\n"
+                f"Command: {cmd}\n"
+                "Check models.triposr.inference.command path in config and verify the venv was "
+                "created on this server (copied venvs may contain broken absolute symlinks)."
+            ) from exc
         except subprocess.CalledProcessError as exc:
             stderr_tail = (exc.stderr or "").strip()[-1500:]
             raise RuntimeError(

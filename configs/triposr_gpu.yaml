@@ -12,7 +12,7 @@ models:
     output_dir: outputs/triposr
     task_type: image_to_3d
     inference:
-      command: ../../.venvs/triposr/bin/python run.py {input_image} --output-dir {output_dir} --no-remove-bg
+      command: "{project_root}/.venvs/trellis310/bin/python run.py {input_image} --output-dir {output_dir} --no-remove-bg"
       generated_mesh: "{output_dir}/0/mesh.obj"
       expected_mesh: "{output_dir}/{input_stem}_triposr.obj"
   instantmesh:
@@ -20,19 +20,20 @@ models:
     output_dir: outputs/instantmesh
     task_type: image_to_3d
     inference:
-      command: ../../.venvs/instantmesh/bin/python run.py configs/instant-mesh-large.yaml {input_image} --output_path {output_dir} --no_rembg
+      command: "timeout 180 {project_root}/.venvs/trellis310/bin/python run.py configs/instant-mesh-large.yaml {input_image} --output_path {output_dir} --no_rembg"
       generated_mesh: "{output_dir}/instant-mesh-large/meshes/{input_stem}.obj"
       expected_mesh: "{output_dir}/{input_stem}_instantmesh.obj"
       env:
         HF_ENDPOINT: https://hf-mirror.com
+        PYTHONPATH: /DATA/disk1/yjh/workspace0/model/3DGenLab/external/nvdiffrast
   hunyuan3d:
     repo_path: external/Hunyuan3D-2.1
     output_dir: outputs/hunyuan3d
     task_type: image_or_text_to_3d
     inference:
       prefer: image
-      command_image: ../../.venvs/hunyuan3d/bin/python ../../scripts/hunyuan3d_genlab_infer.py --repo . --mode image --image {input_image} --output-mesh {output_mesh} --model-path tencent/Hunyuan3D-2.1 --subfolder hunyuan3d-dit-v2-1 --device cuda
-      command_text: ../../.venvs/hunyuan3d/bin/python ../../scripts/hunyuan3d_genlab_infer.py --repo . --mode text --prompt-file {prompt_file} --output-mesh {output_mesh} --model-path tencent/Hunyuan3D-2.1 --subfolder hunyuan3d-dit-v2-1 --device cuda
+      command_image: "env -u LD_LIBRARY_PATH {project_root}/.venvs/hunyuan3d/bin/python {project_root}/scripts/hunyuan3d_genlab_infer.py --repo . --mode image --image {input_image} --output-mesh {output_mesh} --model-path tencent/Hunyuan3D-2.1 --subfolder hunyuan3d-dit-v2-1 --device cuda"
+      command_text: "env -u LD_LIBRARY_PATH {project_root}/.venvs/hunyuan3d/bin/python {project_root}/scripts/hunyuan3d_genlab_infer.py --repo . --mode text --prompt-file {prompt_file} --output-mesh {output_mesh} --model-path tencent/Hunyuan3D-2.1 --subfolder hunyuan3d-dit-v2-1 --device cuda"
       generated_mesh: "{output_dir}/{input_stem}_hunyuan3d.obj"
       expected_mesh: "{output_dir}/{input_stem}_hunyuan3d.obj"
       env:
@@ -41,3 +42,14 @@ models:
     repo_path: external/TRELLIS
     output_dir: outputs/trellis
     task_type: image_or_text_to_3d
+    inference:
+      prefer: image
+      command_image: "{project_root}/.venvs/trellis310/bin/python {project_root}/scripts/trellis_genlab_infer.py --repo . --mode image --image {input_image} --output-mesh {output_mesh} --model-path {model_path} --device cuda"
+      command_text: "{project_root}/.venvs/trellis310/bin/python {project_root}/scripts/trellis_genlab_infer.py --repo . --mode text --prompt-file {prompt_file} --output-mesh {output_mesh} --model-path {model_path} --device cuda"
+      generated_mesh: "{output_dir}/{input_stem}_trellis.obj"
+      expected_mesh: "{output_dir}/{input_stem}_trellis.obj"
+      model_path: /DATA/disk1/yjh/workspace0/data/genlab-models/microsoft/TRELLIS-image-large
+      env:
+        HF_ENDPOINT: https://hf-mirror.com
+        ATTN_BACKEND: xformers
+        SPCONV_ALGO: native
