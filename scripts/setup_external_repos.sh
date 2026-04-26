@@ -27,8 +27,17 @@ else
     git clone git@github.com:Tencent-Hunyuan/Hunyuan3D-2.1.git external/Hunyuan3D-2.1
 fi
 
+if [ -d "external/TRELLIS/.git" ]; then
+  echo "[Setup] external/TRELLIS already exists. Skipping clone."
+else
+  echo "[Setup] Cloning TRELLIS into external/TRELLIS ..."
+  GIT_SSH_COMMAND='ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no' \
+    git clone git@github.com:microsoft/TRELLIS.git external/TRELLIS
+fi
+
 echo "[Setup] Done. External repositories are ready:"
 echo "  - external/TripoSR"
 echo "  - external/InstantMesh"
 echo "  - external/Hunyuan3D-2.1"
+echo "  - external/TRELLIS"
 echo "[Setup] Next: install each model's GPU dependencies in its dedicated environment."

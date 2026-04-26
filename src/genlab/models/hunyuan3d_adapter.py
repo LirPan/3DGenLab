@@ -168,6 +168,7 @@ class Hunyuan3DAdapter(Base3DGenModel):
             "output_dir": str(out_dir_abs),
             "output_mesh": str(out_mesh_abs),
             "prompt_file": "",
+            "project_root": str(Path(__file__).resolve().parents[3]),
         }
         if not use_image:
             prompt_file = out_dir_abs / f"_genlab_hunyuan_prompt_{stem_for_paths}.txt"
@@ -193,14 +194,29 @@ class Hunyuan3DAdapter(Base3DGenModel):
                 log_step(f"[Hunyuan3D-2.1][real-mode] stdout:\n{completed.stdout.strip()}")
             if completed.stderr.strip():
                 log_step(f"[Hunyuan3D-2.1][real-mode] stderr:\n{completed.stderr.strip()}")
+        except FileNotFoundError as exc:
+            raise RuntimeError(
+                "[Hunyuan3D-2.1][real-mode] Python interpreter/command not found.\n"
+                f"Command: {cmd}\n"
+                "Check models.hunyuan3d.inference.command_* paths in config and verify the venv "
+                "was created on this server."
+            ) from exc
         except subprocess.CalledProcessError as exc:
             stderr_tail = (exc.stderr or "").strip()[-1500:]
+            runtime_hint = ""
+            if "Qt_5.15" in stderr_tail or "pymeshlab" in stderr_tail:
+                runtime_hint = (
+                    "\nHint: Hunyuan3D postprocess imports pymeshlab. On this server, "
+                    "unset conflicting runtime libs (LD_LIBRARY_PATH) and ensure compatible "
+                    "Qt runtime is visible to the venv."
+                )
             raise RuntimeError(
                 "[Hunyuan3D-2.1][real-mode] Command failed.\n"
                 f"Command: {cmd}\n"
                 f"Exit code: {exc.returncode}\n"
                 f"Stderr (tail): {stderr_tail}\n"
                 "Verify Hunyuan3D-2.1 install (see README), HF mirror env, and GPU memory."
+                f"{runtime_hint}"
             ) from exc
 
         if not generated_mesh.exists():
