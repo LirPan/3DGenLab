@@ -117,6 +117,45 @@ python scripts/run_pipeline.py \
   --benchmark
 ```
 
+## Dataset-driven Evaluation
+
+Use `dataset/metadata/cases.json` as the canonical manifest and run by case, group, or all cases:
+
+```bash
+# 1) Run one case_id from cases.json
+python scripts/run_dataset_eval.py --case-id robot_img --dry-run
+
+# 2) Run one group from cases.json
+python scripts/run_dataset_eval.py --group main_image_set --dry-run
+
+# 3) Run all dataset cases
+python scripts/run_dataset_eval.py --all --dry-run
+```
+
+Real GPU run example:
+
+```bash
+HF_ENDPOINT=https://hf-mirror.com .venvs/genlab/bin/python scripts/run_dataset_eval.py \
+  --group main_image_set \
+  --config configs/triposr_gpu.yaml \
+  --no-dry-run \
+  --benchmark
+```
+
+Behavior:
+
+- Respects per-case `intended_models` from `dataset/metadata/cases.json`.
+- Image cases use image paths from metadata; text cases read prompt files from metadata.
+- Final outputs are normalized to:
+  - `outputs/<model_name>/<case_id>_<model_name>.<ext>`
+- Per-run report:
+  - `outputs/reports/<case_id>_<model_name>.json`
+- Batch aggregate reports:
+  - `outputs/reports/comparison_summary.json`
+  - `outputs/reports/comparison_summary.csv`
+
+Failed runs are also kept in per-run reports and comparison summaries, so one model failure does not stop the batch.
+
 ## Optional Conda Setup
 
 If you prefer Miniforge/Conda on Mac:
