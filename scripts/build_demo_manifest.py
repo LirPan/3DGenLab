@@ -38,6 +38,9 @@ def main() -> int:
                 "num_faces": row.get("num_faces"),
                 "is_watertight": row.get("is_watertight"),
                 "file_size_mb": row.get("file_size_mb"),
+                "render_path": row.get("render_path", ""),
+                "render_success": row.get("render_success"),
+                "render_error": row.get("render_error", ""),
                 "error_message": row.get("error_message", ""),
             }
         )
@@ -67,6 +70,7 @@ def main() -> int:
             "hunyuan3d": str(outputs_dir / "hunyuan3d"),
             "trellis": str(outputs_dir / "trellis"),
         },
+        "renders_dir": str(outputs_dir / "renders"),
     }
     index_path = demo_ready_dir / "index.json"
     index_path.write_text(json.dumps(index_payload, indent=2, ensure_ascii=False), encoding="utf-8")

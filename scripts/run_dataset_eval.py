@@ -17,6 +17,7 @@ if str(SRC_DIR) not in sys.path:
 
 from genlab.eval.mesh_metrics import evaluate_mesh
 from genlab.models.registry import MODEL_REGISTRY, get_model
+from genlab.render.blender_render import render_mesh_with_blender
 from genlab.utils import ensure_dir, load_yaml_config, log_step
 
 SUMMARY_FIELDS = [
@@ -33,6 +34,9 @@ SUMMARY_FIELDS = [
     "num_faces",
     "is_watertight",
     "file_size_mb",
+    "render_path",
+    "render_success",
+    "render_error",
     "error_message",
 ]
 
@@ -79,6 +83,21 @@ def parse_args() -> argparse.Namespace:
         action="store_const",
         const=False,
         help="Force benchmark off",
+    )
+    parser.add_argument(
+        "--render",
+        dest="render",
+        action="store_const",
+        const=True,
+        default=None,
+        help="Enable Blender render output for successful meshes",
+    )
+    parser.add_argument(
+        "--no-render",
+        dest="render",
+        action="store_const",
+        const=False,
+        help="Disable Blender render output",
     )
     return parser.parse_args()
 
@@ -152,6 +171,9 @@ def _blank_summary_row(case: dict[str, Any], model_name: str) -> dict[str, Any]:
         "num_faces": None,
         "is_watertight": None,
         "file_size_mb": None,
+        "render_path": "",
+        "render_success": None,
+        "render_error": "",
         "error_message": "",
     }
 
@@ -211,11 +233,48 @@ def _print_compact_summary(rows: list[dict[str, Any]]) -> None:
         print(f"{row['case_id']} | {row['model_name']} | {status} | {runtime} | {output_or_error}")
 
 
+def _resolve_render_settings(config: dict[str, Any], force_render: bool | None) -> dict[str, Any]:
+    top_render = config.get("render", False)
+    render_settings = config.get("render_settings", {})
+    if not isinstance(render_settings, dict):
+        render_settings = {}
+
+    enabled_default = False
+    if isinstance(top_render, bool):
+        enabled_default = top_render
+    elif isinstance(top_render, dict):
+        enabled_default = bool(top_render.get("enabled", False))
+        merged = dict(top_render)
+        merged.update(render_settings)
+        render_settings = merged
+
+    enabled = enabled_default if force_render is None else bool(force_render)
+    configured_models = render_settings.get("models", ["trellis"])
+    if not isinstance(configured_models, list):
+        configured_models = ["trellis"]
+    models = [str(name).strip().lower() for name in configured_models if str(name).strip()]
+    if not models:
+        models = ["trellis"]
+    return {
+        "enabled": enabled,
+        "mode": str(render_settings.get("mode", "system")),
+        "blender_bin": str(render_settings.get("blender_bin", "blender")),
+        "width": int(render_settings.get("width", 768)),
+        "height": int(render_settings.get("height", 768)),
+        "samples": int(render_settings.get("samples", 32)),
+        "engine": str(render_settings.get("engine", "CYCLES")),
+        "transparent_background": bool(render_settings.get("transparent_background", True)),
+        "image_format": str(render_settings.get("image_format", "png")).lower().lstrip("."),
+        "models": models,
+    }
+
+
 def main() -> int:
     args = parse_args()
     config = load_yaml_config(ROOT / args.config)
     dry_run = bool(config.get("dry_run", True)) if args.dry_run is None else bool(args.dry_run)
     benchmark = bool(config.get("benchmark", True)) if args.benchmark is None else bool(args.benchmark)
+    render_cfg = _resolve_render_settings(config, args.render)
 
     all_cases = _load_cases(ROOT / args.dataset)
     selected_cases = _resolve_selected_cases(args, all_cases)
@@ -223,11 +282,13 @@ def main() -> int:
 
     output_root = ensure_dir(ROOT / config.get("output_root", "outputs"))
     reports_dir = ensure_dir(output_root / "reports")
+    renders_root = ensure_dir(output_root / "renders") if render_cfg["enabled"] else None
 
     log_step(f"[DatasetEval] Config: {args.config}")
     log_step(f"[DatasetEval] Dataset: {args.dataset}")
     log_step(f"[DatasetEval] Dry run: {dry_run}")
     log_step(f"[DatasetEval] Benchmark: {benchmark}")
+    log_step(f"[DatasetEval] Render: {render_cfg['enabled']}")
     log_step(f"[DatasetEval] Cases selected: {len(selected_cases)}")
 
     rows: list[dict[str, Any]] = []
@@ -300,6 +361,34 @@ def main() -> int:
                     row["num_faces"] = metrics.get("num_faces")
                     row["is_watertight"] = metrics.get("is_watertight")
                     row["file_size_mb"] = metrics.get("file_size_mb")
+
+                if (
+                    render_cfg["enabled"]
+                    and renders_root is not None
+                    and model_name in render_cfg["models"]
+                ):
+                    render_dir = ensure_dir(renders_root / model_name)
+                    render_path = render_dir / f"{case_id}_{model_name}.{render_cfg['image_format']}"
+                    try:
+                        render_mesh_with_blender(
+                            canonical_output,
+                            render_path,
+                            mode=render_cfg["mode"],
+                            blender_bin=render_cfg["blender_bin"],
+                            width=render_cfg["width"],
+                            height=render_cfg["height"],
+                            samples=render_cfg["samples"],
+                            engine=render_cfg["engine"],
+                            transparent_background=render_cfg["transparent_background"],
+                        )
+                        row["render_path"] = str(render_path)
+                        row["render_success"] = True
+                        row["render_error"] = ""
+                    except Exception as render_exc:
+                        row["render_path"] = str(render_path)
+                        row["render_success"] = False
+                        row["render_error"] = str(render_exc)
+                        log_step(f"[DatasetEval] Render failed {case_id} -> {model_name}: {render_exc}")
 
                 report_path = _write_per_run_report(reports_dir, row)
                 log_step(f"[DatasetEval] Report written: {report_path}")

@@ -3,8 +3,18 @@ input_image: inputs/images/example.png
 input_prompt: inputs/prompts/example.txt
 output_root: outputs
 dry_run: false
-render: false
+render: true
 benchmark: true
+render_settings:
+  mode: system
+  blender_bin: blender
+  width: 768
+  height: 768
+  samples: 32
+  engine: CYCLES
+  transparent_background: true
+  image_format: png
+  models: [trellis]
 
 models:
   triposr:

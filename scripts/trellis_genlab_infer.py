@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
+import time
 from pathlib import Path
 
 
@@ -82,23 +84,49 @@ def main() -> int:
         pipeline_cls = TrellisTextTo3DPipeline
         pipeline_input = prompt
 
-    try:
-        if args.model_path:
-            pipeline = pipeline_cls.from_pretrained(args.model_path)
-        else:
-            pipeline = pipeline_cls.from_pretrained()
-    except TypeError:
-        if args.model_path:
-            pipeline = pipeline_cls.from_pretrained(args.model_path)
-        else:
+    load_exc = None
+    switched_hf_endpoint = False
+    for attempt in range(1, 4):
+        try:
+            if args.model_path:
+                pipeline = pipeline_cls.from_pretrained(args.model_path)
+            else:
+                pipeline = pipeline_cls.from_pretrained()
+            break
+        except TypeError:
+            if args.model_path:
+                pipeline = pipeline_cls.from_pretrained(args.model_path)
+                break
             print(
                 "[trellis_genlab_infer] ERROR: model_path is required by this TRELLIS build. "
                 "Set models.trellis.inference.model_path in config.",
                 file=sys.stderr,
             )
             return 2
-    except Exception as exc:
-        print(f"[trellis_genlab_infer] ERROR: failed to load TRELLIS pipeline: {exc}", file=sys.stderr)
+        except Exception as exc:
+            load_exc = exc
+            if (
+                not switched_hf_endpoint
+                and os.environ.get("HF_ENDPOINT")
+                and "hf-mirror.com" in str(exc).lower()
+            ):
+                switched_hf_endpoint = True
+                os.environ.pop("HF_ENDPOINT", None)
+                print(
+                    "[trellis_genlab_infer] WARN: HF_ENDPOINT mirror failed, retrying with default Hugging Face endpoint",
+                    file=sys.stderr,
+                )
+            if attempt >= 3:
+                print(f"[trellis_genlab_infer] ERROR: failed to load TRELLIS pipeline: {exc}", file=sys.stderr)
+                return 4
+            wait_s = attempt * 2
+            print(
+                f"[trellis_genlab_infer] WARN: load attempt {attempt}/3 failed: {exc}; retrying in {wait_s}s",
+                file=sys.stderr,
+            )
+            time.sleep(wait_s)
+    else:
+        print(f"[trellis_genlab_infer] ERROR: failed to load TRELLIS pipeline: {load_exc}", file=sys.stderr)
         return 4
 
     if args.device == "cuda":

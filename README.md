@@ -153,8 +153,47 @@ Behavior:
 - Batch aggregate reports:
   - `outputs/reports/comparison_summary.json`
   - `outputs/reports/comparison_summary.csv`
+- Optional render outputs (when enabled):
+  - `outputs/renders/<model_name>/<case_id>_<model_name>.png`
+- Per-run report render fields:
+  - `render_path`, `render_success`, `render_error`
 
 Failed runs are also kept in per-run reports and comparison summaries, so one model failure does not stop the batch.
+
+## Blender Rendering (Optional)
+
+The dataset runner can render a preview image for each successful mesh by calling Blender in headless mode.
+
+- Default mode is system executable (`blender`).
+- Python `bpy` mode is also supported through `scripts/render_blender.py` and falls back to system mode when unavailable.
+- Render settings are configured via `render_settings` in YAML.
+
+Enable render during dataset evaluation:
+
+```bash
+/DATA/disk1/yjh/workspace0/model/3DGenLab/.venvs/trellis310/bin/python scripts/run_dataset_eval.py \
+  --group main_image_set \
+  --config configs/triposr_gpu.yaml \
+  --no-dry-run \
+  --benchmark \
+  --render
+```
+
+Render one existing mesh directly:
+
+```bash
+python scripts/render_blender.py \
+  --mesh outputs/trellis/robot_img_trellis.obj \
+  --output outputs/renders/trellis/robot_img_trellis.png \
+  --mode system \
+  --blender-bin blender
+```
+
+Troubleshooting:
+
+- If `blender` is not found, set `render_settings.blender_bin` to an absolute Blender path.
+- For headless servers, always use `-b` mode (already used by integration).
+- If render fails, mesh success is preserved and error details are recorded in `render_error`.
 
 ## Optional Conda Setup
 

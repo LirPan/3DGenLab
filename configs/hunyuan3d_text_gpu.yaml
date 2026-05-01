@@ -6,8 +6,18 @@ input_image: null
 input_prompt: inputs/prompts/example.txt
 output_root: outputs
 dry_run: false
-render: false
+render: true
 benchmark: true
+render_settings:
+  mode: system
+  blender_bin: blender
+  width: 768
+  height: 768
+  samples: 32
+  engine: CYCLES
+  transparent_background: true
+  image_format: png
+  models: [trellis]
 
 models:
   hunyuan3d:
@@ -16,8 +26,8 @@ models:
     task_type: image_or_text_to_3d
     inference:
       prefer: text
-      command_image: ../../.venvs/hunyuan3d/bin/python ../../scripts/hunyuan3d_genlab_infer.py --repo . --mode image --image {input_image} --output-mesh {output_mesh} --model-path tencent/Hunyuan3D-2.1 --subfolder hunyuan3d-dit-v2-1 --device cuda
-      command_text: ../../.venvs/hunyuan3d/bin/python ../../scripts/hunyuan3d_genlab_infer.py --repo . --mode text --prompt-file {prompt_file} --output-mesh {output_mesh} --model-path tencent/Hunyuan3D-2.1 --subfolder hunyuan3d-dit-v2-1 --device cuda
+      command_image: env -u LD_LIBRARY_PATH ../../.venvs/hunyuan3d/bin/python ../../scripts/hunyuan3d_genlab_infer.py --repo . --mode image --image {input_image} --output-mesh {output_mesh} --model-path tencent/Hunyuan3D-2.1 --subfolder hunyuan3d-dit-v2-1 --device cuda
+      command_text: env -u LD_LIBRARY_PATH ../../.venvs/hunyuan3d/bin/python ../../scripts/hunyuan3d_genlab_infer.py --repo . --mode text --prompt-file {prompt_file} --output-mesh {output_mesh} --model-path tencent/Hunyuan3D-2.1 --subfolder hunyuan3d-dit-v2-1 --device cuda
       generated_mesh: "{output_dir}/{input_stem}_hunyuan3d.obj"
       expected_mesh: "{output_dir}/{input_stem}_hunyuan3d.obj"
       env:

@@ -3,8 +3,18 @@ input_image: null
 input_prompt: inputs/prompts/example.txt
 output_root: outputs
 dry_run: false
-render: false
+render: true
 benchmark: false
+render_settings:
+  mode: system
+  blender_bin: blender
+  width: 768
+  height: 768
+  samples: 32
+  engine: CYCLES
+  transparent_background: true
+  image_format: png
+  models: [trellis]
 
 models:
   hunyuan3d:

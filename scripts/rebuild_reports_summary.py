@@ -20,6 +20,9 @@ SUMMARY_FIELDS = [
     "num_faces",
     "is_watertight",
     "file_size_mb",
+    "render_path",
+    "render_success",
+    "render_error",
     "error_message",
 ]
 
