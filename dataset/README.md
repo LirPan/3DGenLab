@@ -1,13 +1,11 @@
-# Evaluation Dataset (Planned, Small-Scale)
+# Evaluation inputs
 
-This folder defines a practical, server-friendly evaluation set for 3DGenLab.
+The [case manifest](metadata/cases.json) defines the input file, case group and supported adapters for each evaluation case.
 
-- `images/`: shared image-conditioned cases for fair multi-model comparison.
-- `prompts/`: text extension cases for models with text-to-3D support.
-- `metadata/cases.json`: machine-readable case registry.
+| Group | Inputs | Purpose |
+| --- | --- | --- |
+| `main_image_set` | Robot, chair, sneaker and mug photos | Compare all four models on the same images |
+| `text_extension_set` | Low-poly robot and treasure chest prompts | Exercise the Hunyuan3D and TRELLIS text pipelines |
+| `challenge_set` | Glass and desk lamp photos | Inspect failure cases involving transparency or thin structures |
 
-Current placeholder policy:
-
-- `images/*.png` are temporary placeholders copied from `inputs/images/example.png`.
-- You can replace each placeholder with a real image while keeping the same filename.
-- Prompt files are lightweight starter prompts and can be refined later.
+See the [image sources and credits](metadata/sources.md) for the photos used in the dataset. The sample in [`inputs/`](../inputs/) is used by the local smoke test.

@@ -33,4 +33,4 @@ python -m pip install -e .
 
 echo "[Bootstrap] Bootstrap completed successfully."
 echo "[Bootstrap] Next command:"
-echo "python scripts/smoke_test.py"
+echo ".venv/bin/python scripts/smoke_test.py"
